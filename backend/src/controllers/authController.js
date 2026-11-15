@@ -1,8 +1,11 @@
 
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// Registrar un nuevo usuario
+// ======================================
+// REGISTRAR UN NUEVO USUARIO
+// ======================================
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -85,4 +88,98 @@ const register = async (req, res) => {
   }
 };
 
-module.exports = { register };
+// ======================================
+// INICIAR SESIÓN
+// ======================================
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validar datos obligatorios
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password
+    ) {
+      return res.status(400).json({
+        message: "Correo y contraseña son obligatorios"
+      });
+    }
+
+    // Buscar usuario incluyendo contraseña cifrada
+    const user = await User.findOne({
+      email: email.trim().toLowerCase()
+    }).select("+password");
+
+    if (!user || !user.password) {
+      return res.status(401).json({
+        message: "Credenciales incorrectas"
+      });
+    }
+
+    // Comparar contraseña con bcrypt
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!validPassword) {
+      return res.status(401).json({
+        message: "Credenciales incorrectas"
+      });
+    }
+
+    // Verificar que la cuenta esté activa
+    if (!user.isActive) {
+      return res.status(403).json({
+        message: "Cuenta desactivada"
+      });
+    }
+
+    // Generar token de acceso
+    const accessToken = jwt.sign(
+      {
+        userId: user._id.toString(),
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    // Generar token de renovación
+    const refreshToken = jwt.sign(
+      {
+        userId: user._id.toString()
+      },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Respuesta exitosa
+    return res.status(200).json({
+      message: "Inicio de sesión exitoso",
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al iniciar sesión:", error.message);
+
+    return res.status(500).json({
+      message: "Error interno del servidor"
+    });
+  }
+};
+
+// Exportar funciones
+module.exports = {
+  register,
+  login
+};
