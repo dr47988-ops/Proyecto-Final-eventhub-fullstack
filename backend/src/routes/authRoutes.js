@@ -37,4 +37,18 @@ router.get(
   }
 );
 
+
+ // Ruta de prueba exclusiva para organizadores
+router.get(
+  "/organizer-test",
+  authMiddleware,
+  authorizeRoles("organizer"),
+  (req, res) => {
+    return res.status(200).json({
+      message: "Acceso autorizado para organizador"
+    });
+  }
+);
+
+
 module.exports = router;
