@@ -6,30 +6,55 @@ const {
   login,
   refresh,
   logout,
-  verifyEmail
+  verifyEmail,
+  forgotPassword,
+  resetPassword
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 const authorizeRoles = require("../middlewares/roleMiddleware");
 
+// Protección contra solicitudes excesivas
+const passwordResetLimiter = require(
+  "../middlewares/passwordResetLimiter"
+);
+
 const router = express.Router();
 
-// Registrar usuario
+// ======================================
+// REGISTRO E INICIO DE SESIÓN
+// ======================================
 router.post("/register", register);
-
-// Iniciar sesión
 router.post("/login", login);
 
-// Renovar tokens JWT
+// ======================================
+// RENOVAR Y CERRAR SESIÓN
+// ======================================
 router.post("/refresh", refresh);
-
-// Cerrar sesión
 router.post("/logout", logout);
 
-// Verificar correo electrónico
+// ======================================
+// VERIFICACIÓN DE CORREO
+// ======================================
 router.post("/verify-email", verifyEmail);
 
-// Consultar perfil del usuario autenticado
+// ======================================
+// RECUPERACIÓN DE CONTRASEÑA
+// ======================================
+
+// Máximo 5 solicitudes cada 15 minutos por IP
+router.post(
+  "/forgot-password",
+  passwordResetLimiter,
+  forgotPassword
+);
+
+// Cambiar contraseña mediante token válido
+router.post("/reset-password", resetPassword);
+
+// ======================================
+// PERFIL DEL USUARIO AUTENTICADO
+// ======================================
 router.get("/profile", authMiddleware, (req, res) => {
   return res.status(200).json({
     message: "Perfil obtenido correctamente",
@@ -37,7 +62,9 @@ router.get("/profile", authMiddleware, (req, res) => {
   });
 });
 
-// Ruta de prueba exclusiva para administradores
+// ======================================
+// RUTA EXCLUSIVA PARA ADMINISTRADORES
+// ======================================
 router.get(
   "/admin-test",
   authMiddleware,
@@ -49,7 +76,9 @@ router.get(
   }
 );
 
-// Ruta de prueba exclusiva para organizadores
+// ======================================
+// RUTA EXCLUSIVA PARA ORGANIZADORES
+// ======================================
 router.get(
   "/organizer-test",
   authMiddleware,

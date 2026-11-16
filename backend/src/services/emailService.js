@@ -37,6 +37,37 @@ Si no creaste esta cuenta, ignora este mensaje.`
   });
 }
 
+// Enviar correo de recuperación de contraseña
+async function sendPasswordResetEmail(email, token) {
+  const transporter = createTransporter();
+
+  const resetUrl =
+    `${process.env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM,
+    to: email,
+    subject: "Recupera tu contraseña - EventHub",
+    text: `Hola,
+
+Recibimos una solicitud para restablecer la contraseña
+de tu cuenta de EventHub.
+
+Para crear una nueva contraseña, abre este enlace:
+
+${resetUrl}
+
+Este enlace vence en 30 minutos y solo puede
+utilizarse una vez.
+
+Si no solicitaste cambiar tu contraseña,
+puedes ignorar este mensaje.
+
+Equipo EventHub`
+  });
+}
+
 module.exports = {
-  sendVerificationEmail
+  sendVerificationEmail,
+  sendPasswordResetEmail
 };

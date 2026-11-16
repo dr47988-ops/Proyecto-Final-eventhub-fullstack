@@ -11,7 +11,9 @@ const hashToken = (token) => {
     .digest("hex");
 };
 
-// Crear y guardar un refresh token
+// ======================================
+// CREAR REFRESH TOKEN
+// ======================================
 const createRefreshToken = async (userId) => {
   const refreshToken = jwt.sign(
     {
@@ -40,9 +42,10 @@ const createRefreshToken = async (userId) => {
   return refreshToken;
 };
 
-
+// ======================================
+// RENOVAR REFRESH TOKEN
+// ======================================
 const rotateRefreshToken = async (token) => {
-  // Verificar firma y vencimiento del JWT
   const decoded = jwt.verify(
     token,
     process.env.JWT_REFRESH_SECRET,
@@ -69,7 +72,6 @@ const rotateRefreshToken = async (token) => {
     return null;
   }
 
-  // Generar un nuevo refresh token
   const newRefreshToken = await createRefreshToken(
     session.user
   );
@@ -80,39 +82,55 @@ const rotateRefreshToken = async (token) => {
   };
 };
 
+// ======================================
+// REVOCAR REFRESH TOKEN (LOGOUT)
+// ======================================
+const revokeRefreshToken = async (token) => {
+  const decoded = jwt.verify(
+    token,
+    process.env.JWT_REFRESH_SECRET,
+    { algorithms: ["HS256"] }
+  );
 
- // ======================================
- // REVOCAR REFRESH TOKEN (LOGOUT)
- // ======================================
- const revokeRefreshToken = async (token) => {
-   // Verificar firma y vencimiento
-   const decoded = jwt.verify(
-     token,
-     process.env.JWT_REFRESH_SECRET,
-     { algorithms: ["HS256"] }
-   );
+  const session = await RefreshToken.findOneAndUpdate(
+    {
+      tokenHash: hashToken(token),
+      user: decoded.userId,
+      revokedAt: null,
+      expiresAt: { $gt: new Date() }
+    },
+    {
+      $set: { revokedAt: new Date() }
+    },
+    { new: true }
+  );
 
-   // Buscar el token activo y revocarlo
-   const session = await RefreshToken.findOneAndUpdate(
-     {
-       tokenHash: hashToken(token),
-       user: decoded.userId,
-       revokedAt: null,
-       expiresAt: { $gt: new Date() }
-     },
-     {
-       $set: { revokedAt: new Date() }
-     },
-     { new: true }
-   );
+  return Boolean(session);
+};
 
-   return Boolean(session);
- };
+// ======================================
+// REVOCAR TODAS LAS SESIONES DEL USUARIO
+// ======================================
+const revokeAllUserRefreshTokens = async (userId) => {
+  const result = await RefreshToken.updateMany(
+    {
+      user: userId,
+      revokedAt: null
+    },
+    {
+      $set: {
+        revokedAt: new Date()
+      }
+    }
+  );
 
+  return result.modifiedCount;
+};
 
 module.exports = {
   hashToken,
   createRefreshToken,
   rotateRefreshToken,
-  revokeRefreshToken
+  revokeRefreshToken,
+  revokeAllUserRefreshTokens
 };

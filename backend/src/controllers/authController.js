@@ -4,9 +4,11 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const EmailVerificationToken = require("../models/EmailVerificationToken");
+const PasswordResetToken = require("../models/PasswordResetToken");
 
 const {
-  sendVerificationEmail
+  sendVerificationEmail,
+  sendPasswordResetEmail
 } = require("../services/emailService");
 
 const {
@@ -15,10 +17,22 @@ const {
 } = require("../services/emailVerificationService");
 
 const {
+  createPasswordResetToken,
+  hashPasswordResetToken
+} = require("../services/passwordResetService");
+
+const {
   createRefreshToken,
   rotateRefreshToken,
-  revokeRefreshToken
+  revokeRefreshToken,
+  revokeAllUserRefreshTokens
 } = require("../services/tokenService");
+
+const {
+  setRefreshCookie,
+  clearRefreshCookie,
+  getRefreshCookie
+} = require("../utils/authCookies");
 
 // ======================================
 // REGISTRAR UN NUEVO USUARIO
@@ -27,7 +41,6 @@ const register = async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
 
-    // Validar campos obligatorios
     if (
       typeof name !== "string" ||
       typeof email !== "string" ||
@@ -41,17 +54,14 @@ const register = async (req, res) => {
       });
     }
 
-    // Validar longitud de contraseña
     if (password.length < 8 || password.length > 72) {
       return res.status(400).json({
         message: "La contraseña debe tener entre 8 y 72 caracteres"
       });
     }
 
-    // Normalizar correo
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Verificar si el correo ya existe
     const existingUser = await User.findOne({
       email: normalizedEmail
     });
@@ -62,10 +72,8 @@ const register = async (req, res) => {
       });
     }
 
-    // Cifrar contraseña
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Crear usuario con rol attendee
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
@@ -74,7 +82,6 @@ const register = async (req, res) => {
       isEmailVerified: false
     });
 
-    // Generar token y enviar correo de verificación
     let verificationEmailSent = false;
 
     try {
@@ -87,15 +94,13 @@ const register = async (req, res) => {
       );
 
       verificationEmailSent = true;
-
     } catch (emailError) {
       console.error(
-        "Error al preparar o enviar la verificación:",
+        "Error al enviar verificación:",
         emailError.message
       );
     }
 
-    // Respuesta del registro
     return res.status(201).json({
       message: verificationEmailSent
         ? "Usuario registrado correctamente. Revisa tu correo para verificar tu cuenta."
@@ -152,7 +157,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Buscar usuario incluyendo contraseña cifrada
     const user = await User.findOne({
       email: email.trim().toLowerCase()
     }).select("+password");
@@ -163,7 +167,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Verificar contraseña
     const validPassword = await bcrypt.compare(
       password,
       user.password
@@ -175,14 +178,18 @@ const login = async (req, res) => {
       });
     }
 
-    // Verificar que la cuenta esté activa
     if (!user.isActive) {
       return res.status(403).json({
         message: "Cuenta desactivada"
       });
     }
 
-    // Generar access token
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        message: "Debes verificar tu correo electrónico antes de iniciar sesión."
+      });
+    }
+
     const accessToken = jwt.sign(
       {
         userId: user._id.toString(),
@@ -195,15 +202,15 @@ const login = async (req, res) => {
       }
     );
 
-    // Generar refresh token
     const refreshToken = await createRefreshToken(
       user._id
     );
 
+    setRefreshCookie(res, refreshToken);
+
     return res.status(200).json({
       message: "Inicio de sesión exitoso",
       accessToken,
-      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -226,22 +233,18 @@ const login = async (req, res) => {
 };
 
 // ======================================
-// RENOVAR TOKENS JWT
+// RENOVAR SESIÓN
 // ======================================
 const refresh = async (req, res) => {
   try {
-    const { refreshToken } = req.body || {};
+    const refreshToken = getRefreshCookie(req);
 
-    if (
-      typeof refreshToken !== "string" ||
-      !refreshToken.trim()
-    ) {
-      return res.status(400).json({
-        message: "Refresh token obligatorio"
+    if (!refreshToken) {
+      return res.status(401).json({
+        message: "No hay una sesión activa"
       });
     }
 
-    // Verificar firma y vencimiento
     const decoded = jwt.verify(
       refreshToken,
       process.env.JWT_REFRESH_SECRET,
@@ -250,27 +253,30 @@ const refresh = async (req, res) => {
       }
     );
 
-    // Buscar usuario activo
     const user = await User.findById(decoded.userId);
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.isEmailVerified) {
+      clearRefreshCookie(res);
+
       return res.status(401).json({
         message: "Sesión no autorizada"
       });
     }
 
-    // Rotar refresh token
     const result = await rotateRefreshToken(
       refreshToken
     );
 
     if (!result) {
+      clearRefreshCookie(res);
+
       return res.status(401).json({
-        message: "Refresh token inválido o revocado"
+        message: "Sesión inválida o revocada"
       });
     }
 
-    // Generar nuevo access token
+    setRefreshCookie(res, result.refreshToken);
+
     const accessToken = jwt.sign(
       {
         userId: user._id.toString(),
@@ -284,9 +290,8 @@ const refresh = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "Tokens renovados correctamente",
-      accessToken,
-      refreshToken: result.refreshToken
+      message: "Sesión renovada correctamente",
+      accessToken
     });
 
   } catch (error) {
@@ -295,13 +300,15 @@ const refresh = async (req, res) => {
       error.name === "JsonWebTokenError" ||
       error.name === "NotBeforeError"
     ) {
+      clearRefreshCookie(res);
+
       return res.status(401).json({
-        message: "Refresh token inválido o expirado"
+        message: "Sesión inválida o expirada"
       });
     }
 
     console.error(
-      "Error al renovar tokens:",
+      "Error al renovar sesión:",
       error.message
     );
 
@@ -312,46 +319,28 @@ const refresh = async (req, res) => {
 };
 
 // ======================================
-// CERRAR SESIÓN (LOGOUT)
+// CERRAR SESIÓN
 // ======================================
 const logout = async (req, res) => {
   try {
-    const { refreshToken } = req.body || {};
+    const refreshToken = getRefreshCookie(req);
 
-    if (
-      typeof refreshToken !== "string" ||
-      !refreshToken.trim()
-    ) {
-      return res.status(400).json({
-        message: "Refresh token obligatorio"
+    if (!refreshToken) {
+      clearRefreshCookie(res);
+
+      return res.status(200).json({
+        message: "Sesión cerrada correctamente"
       });
     }
 
-    const revoked = await revokeRefreshToken(
-      refreshToken
-    );
-
-    if (!revoked) {
-      return res.status(401).json({
-        message: "Refresh token inválido o revocado"
-      });
-    }
+    await revokeRefreshToken(refreshToken);
+    clearRefreshCookie(res);
 
     return res.status(200).json({
       message: "Sesión cerrada correctamente"
     });
 
   } catch (error) {
-    if (
-      error.name === "TokenExpiredError" ||
-      error.name === "JsonWebTokenError" ||
-      error.name === "NotBeforeError"
-    ) {
-      return res.status(401).json({
-        message: "Refresh token inválido o expirado"
-      });
-    }
-
     console.error(
       "Error al cerrar sesión:",
       error.message
@@ -379,10 +368,8 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    // Obtener hash del token
     const tokenHash = hashToken(token.trim());
 
-    // Buscar token válido y no utilizado
     const verification = await EmailVerificationToken.findOne({
       tokenHash,
       usedAt: null,
@@ -395,7 +382,6 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    // Buscar usuario
     const user = await User.findById(
       verification.user
     );
@@ -412,7 +398,6 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    // Consumir token una sola vez
     const consumed = await EmailVerificationToken.findOneAndUpdate(
       {
         _id: verification._id,
@@ -435,7 +420,6 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    // Marcar correo como verificado
     user.isEmailVerified = true;
     await user.save();
 
@@ -456,6 +440,156 @@ const verifyEmail = async (req, res) => {
 };
 
 // ======================================
+// SOLICITAR RECUPERACIÓN DE CONTRASEÑA
+// ======================================
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body || {};
+
+    if (typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({
+        message: "Debes ingresar un correo válido"
+      });
+    }
+
+    const genericMessage =
+      "Si el correo está registrado, recibirás un enlace para recuperar tu contraseña.";
+
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      isActive: true
+    }).select("+password");
+
+    if (!user || !user.password) {
+      return res.status(200).json({
+        message: genericMessage
+      });
+    }
+
+    const token = await createPasswordResetToken(user._id);
+
+    await sendPasswordResetEmail(user.email, token);
+
+    return res.status(200).json({
+      message: genericMessage
+    });
+
+  } catch (error) {
+    console.error(
+      "Error al solicitar recuperación:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "No se pudo procesar la solicitud. Inténtalo más tarde."
+    });
+  }
+};
+
+// ======================================
+// ESTABLECER NUEVA CONTRASEÑA
+// ======================================
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+
+    if (
+      typeof token !== "string" ||
+      !token.trim() ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        message: "Token y nueva contraseña son obligatorios"
+      });
+    }
+
+    if (password.length < 8 || password.length > 72) {
+      return res.status(400).json({
+        message: "La contraseña debe tener entre 8 y 72 caracteres"
+      });
+    }
+
+    const tokenHash = hashPasswordResetToken(token.trim());
+
+    const resetRecord = await PasswordResetToken.findOne({
+      tokenHash,
+      usedAt: null,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!resetRecord) {
+      return res.status(400).json({
+        message: "Enlace de recuperación inválido o expirado"
+      });
+    }
+
+    const user = await User.findById(
+      resetRecord.userId
+    ).select("+password");
+
+    if (!user || !user.isActive || !user.password) {
+      return res.status(400).json({
+        message: "No se puede recuperar esta cuenta"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Consumir el token una sola vez
+    const consumed = await PasswordResetToken.findOneAndUpdate(
+      {
+        _id: resetRecord._id,
+        usedAt: null,
+        expiresAt: { $gt: new Date() }
+      },
+      {
+        $set: {
+          usedAt: new Date()
+        }
+      },
+      {
+        new: true
+      }
+    );
+
+    if (!consumed) {
+      return res.status(400).json({
+        message: "El enlace ya fue utilizado o expiró"
+      });
+    }
+
+    // Actualizar contraseña
+    user.password = hashedPassword;
+    await user.save();
+
+    // Revocar todas las sesiones anteriores
+    await revokeAllUserRefreshTokens(user._id);
+
+    // Eliminar los enlaces de recuperación anteriores
+    await PasswordResetToken.deleteMany({
+      userId: user._id
+    });
+
+    // Limpiar la cookie del navegador actual
+    clearRefreshCookie(res);
+
+    return res.status(200).json({
+      message: "Contraseña actualizada correctamente. Ya puedes iniciar sesión."
+    });
+
+  } catch (error) {
+    console.error(
+      "Error al restablecer contraseña:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "Error interno del servidor"
+    });
+  }
+};
+
+// ======================================
 // EXPORTAR FUNCIONES
 // ======================================
 module.exports = {
@@ -463,5 +597,7 @@ module.exports = {
   login,
   refresh,
   logout,
-  verifyEmail
+  verifyEmail,
+  forgotPassword,
+  resetPassword
 };
