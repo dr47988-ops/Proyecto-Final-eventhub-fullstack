@@ -28,6 +28,17 @@ router.post("/register", register);
 router.post("/login", login);
 
 // ======================================
+// INICIO DE SESIÓN CON GOOGLE
+// ======================================
+// Se conectará al controlador de Google
+// en el siguiente paso.
+const googleLogin = require(
+  "../controllers/googleAuthController"
+);
+
+router.post("/google", googleLogin);
+
+// ======================================
 // RENOVAR Y CERRAR SESIÓN
 // ======================================
 router.post("/refresh", refresh);

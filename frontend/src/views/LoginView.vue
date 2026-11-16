@@ -1,28 +1,57 @@
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { setSession } from "../services/authService";
 import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
 const route = useRoute();
 
-// Datos del formulario
 const email = ref("");
 const password = ref("");
 const mostrarPassword = ref(false);
 
-// Mensajes y estado
 const error = ref("");
 const exito = ref("");
 const cargando = ref(false);
+const cargandoGoogle = ref(false);
 
-// Iniciar sesión
+const googleButton = ref(null);
+const googleDisponible = ref(false);
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+const obtenerDestino = () => {
+  const redirect = route.query.redirect;
+
+  return (
+    typeof redirect === "string" &&
+    redirect.startsWith("/") &&
+    !redirect.startsWith("//") &&
+    !redirect.startsWith("/\\")
+  )
+    ? redirect
+    : "/dashboard";
+};
+
+const completarSesion = async (datos) => {
+  if (!datos.user || !datos.accessToken) {
+    throw new Error("Respuesta de autenticación incompleta");
+  }
+
+  setSession(datos.user, datos.accessToken);
+  password.value = "";
+
+  await router.replace(obtenerDestino());
+};
+
+// ======================================
+// INICIAR SESIÓN CON CORREO
+// ======================================
 const iniciarSesion = async () => {
   error.value = "";
   exito.value = "";
 
-  // Validar campos obligatorios
   if (!email.value.trim() || !password.value) {
     error.value = "Ingresa tu correo y contraseña.";
     return;
@@ -31,19 +60,14 @@ const iniciarSesion = async () => {
   cargando.value = true;
 
   try {
-    // Enviar credenciales al backend
     const respuesta = await fetch(
       "http://localhost:3000/api/auth/login",
       {
         method: "POST",
-
-        // Permitir el envío y recepción de cookies
         credentials: "include",
-
         headers: {
           "Content-Type": "application/json"
         },
-
         body: JSON.stringify({
           email: email.value.trim(),
           password: password.value
@@ -53,7 +77,6 @@ const iniciarSesion = async () => {
 
     const datos = await respuesta.json();
 
-    // Verificar si ocurrió un error
     if (!respuesta.ok) {
       error.value =
         datos.message ||
@@ -62,36 +85,137 @@ const iniciarSesion = async () => {
       return;
     }
 
-   // Guardar la sesión del usuario en memoria
-setSession(datos.user, datos.accessToken);
-
-// Limpiar contraseña
-password.value = "";
-
-// Redirigir a la pantalla principal
-const destino =
-  typeof route.query.redirect === "string" &&
-  route.query.redirect.startsWith("/") &&
-  !route.query.redirect.startsWith("//")
-    ? route.query.redirect
-    : "/dashboard";
-
-await router.replace(destino);
-
+    await completarSesion(datos);
   } catch (err) {
     error.value =
-      "No se pudo conectar con el servidor. Comprueba que el backend esté encendido.";
+      "No se pudo iniciar sesión. Comprueba que el backend esté encendido.";
   } finally {
     cargando.value = false;
   }
 };
+
+// ======================================
+// INICIAR SESIÓN CON GOOGLE
+// ======================================
+const iniciarSesionGoogle = async (respuestaGoogle) => {
+  error.value = "";
+  exito.value = "";
+
+  if (!respuestaGoogle?.credential) {
+    error.value = "Google no devolvió una credencial válida.";
+    return;
+  }
+
+  cargandoGoogle.value = true;
+
+  try {
+    const respuesta = await fetch(
+      "http://localhost:3000/api/auth/google",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          credential: respuestaGoogle.credential
+        })
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      error.value =
+        datos.message ||
+        "No se pudo iniciar sesión con Google.";
+      return;
+    }
+
+    await completarSesion(datos);
+  } catch (err) {
+    error.value =
+      "No se pudo conectar con el servidor para iniciar sesión con Google.";
+  } finally {
+    cargandoGoogle.value = false;
+  }
+};
+
+// ======================================
+// CARGAR GOOGLE IDENTITY SERVICES
+// ======================================
+const cargarGoogle = () => {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => resolve();
+    script.onerror = () => reject(
+      new Error("No se pudo cargar Google Identity Services")
+    );
+
+    document.head.appendChild(script);
+  });
+};
+
+onMounted(async () => {
+  if (!googleClientId) {
+    error.value = "Falta configurar Google en el frontend.";
+    return;
+  }
+
+  try {
+    await cargarGoogle();
+    await nextTick();
+
+    if (!googleButton.value) return;
+
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: iniciarSesionGoogle,
+      ux_mode: "popup",
+      auto_select: false
+    });
+
+    window.google.accounts.id.renderButton(
+      googleButton.value,
+      {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: "continue_with",
+        logo_alignment: "left",
+        width: 320
+      }
+    );
+
+    googleDisponible.value = true;
+  } catch (err) {
+    console.error("Error al cargar Google:", err);
+    error.value =
+      "No se pudo cargar el inicio de sesión con Google.";
+  }
+});
+
+onBeforeUnmount(() => {
+  if (window.google?.accounts?.id) {
+    window.google.accounts.id.cancel();
+  }
+});
 </script>
 
 <template>
   <main class="login-page">
     <section class="login-card">
 
-      <!-- Nombre de la aplicación -->
       <div class="brand">
         <span class="brand-icon">✦</span>
         <h1>EventHub</h1>
@@ -107,10 +231,8 @@ await router.replace(destino);
         Ingresa tus datos para continuar.
       </p>
 
-      <!-- Formulario -->
       <form @submit.prevent="iniciarSesion">
 
-        <!-- Correo electrónico -->
         <div class="field">
           <label for="email">Correo electrónico</label>
           <input
@@ -123,7 +245,6 @@ await router.replace(destino);
           />
         </div>
 
-        <!-- Contraseña -->
         <div class="field">
           <label for="password">Contraseña</label>
 
@@ -140,7 +261,11 @@ await router.replace(destino);
             <button
               type="button"
               class="show-password"
-              :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              :aria-label="
+                mostrarPassword
+                  ? 'Ocultar contraseña'
+                  : 'Mostrar contraseña'
+              "
               @click="mostrarPassword = !mostrarPassword"
             >
               {{ mostrarPassword ? "Ocultar" : "Mostrar" }}
@@ -148,7 +273,6 @@ await router.replace(destino);
           </div>
         </div>
 
-        <!-- Recuperar contraseña -->
         <router-link
           to="/forgot-password"
           class="forgot"
@@ -156,7 +280,6 @@ await router.replace(destino);
           ¿Olvidaste tu contraseña?
         </router-link>
 
-        <!-- Mensaje de error -->
         <p
           v-if="error"
           class="error-message"
@@ -165,7 +288,6 @@ await router.replace(destino);
           {{ error }}
         </p>
 
-        <!-- Mensaje de éxito -->
         <p
           v-if="exito"
           class="success-message"
@@ -174,18 +296,35 @@ await router.replace(destino);
           {{ exito }}
         </p>
 
-        <!-- Botón iniciar sesión -->
         <button
           type="submit"
           class="login-button"
-          :disabled="cargando"
+          :disabled="cargando || cargandoGoogle"
         >
           {{ cargando ? "Iniciando sesión..." : "Iniciar sesión" }}
         </button>
 
       </form>
 
-      <!-- Enlace para registrarse -->
+      <div class="separator">
+        <span>o continúa con</span>
+      </div>
+
+      <div class="google-section">
+        <div ref="googleButton" class="google-button"></div>
+
+        <p v-if="cargandoGoogle" class="google-loading">
+          Iniciando sesión con Google...
+        </p>
+
+        <p
+          v-else-if="!googleDisponible && !error"
+          class="google-loading"
+        >
+          Cargando Google...
+        </p>
+      </div>
+
       <p class="register-text">
         ¿Todavía no tienes cuenta?
         <router-link to="/register">
@@ -349,6 +488,43 @@ input:focus {
 .login-button:disabled {
   background: #93c5fd;
   cursor: not-allowed;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 25px 0 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  height: 1px;
+  background: #cbd5e1;
+  flex: 1;
+}
+
+.google-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 45px;
+}
+
+.google-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.google-loading {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 10px;
+  text-align: center;
 }
 
 .register-text {
