@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 
 const authRoutes = require("./routes/authRoutes");
+const adminUserRoutes = require("./routes/adminUserRoutes");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 const swaggerSpec = require("./config/scalar");
 const { apiReference } = require("@scalar/express-api-reference");
@@ -71,6 +72,7 @@ app.get("/", (req, res) => {
 // RUTAS DE AUTENTICACIÓN
 // ======================================
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminUserRoutes);
 
 // ======================================
 // DOCUMENTACIÓN SCALAR
