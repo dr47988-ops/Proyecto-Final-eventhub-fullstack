@@ -11,19 +11,21 @@ const error = ref("");
 const exito = ref("");
 const cargando = ref(false);
 
+const mostrarPassword = ref(false);
+const mostrarConfirmacion = ref(false);
+
 const registrarUsuario = async () => {
   error.value = "";
   exito.value = "";
 
-  // Validar que las contraseñas coincidan
   if (password.value !== confirmarPassword.value) {
     error.value = "Las contraseñas no coinciden.";
     return;
   }
 
-  // Validar longitud de contraseña
   if (password.value.length < 8) {
-    error.value = "La contraseña debe tener al menos 8 caracteres.";
+    error.value =
+      "La contraseña debe tener al menos 8 caracteres.";
     return;
   }
 
@@ -47,7 +49,6 @@ const registrarUsuario = async () => {
 
     const datos = await respuesta.json();
 
-    // Mostrar errores enviados por el backend
     if (!respuesta.ok) {
       error.value =
         datos.message ||
@@ -56,12 +57,10 @@ const registrarUsuario = async () => {
       return;
     }
 
-    // Mostrar mensaje de registro exitoso
     exito.value = datos.verificationEmailSent
       ? "¡Cuenta creada correctamente! Revisa tu correo electrónico para verificar tu cuenta."
       : "Tu cuenta fue creada, pero no se pudo enviar el correo de verificación.";
 
-    // Limpiar formulario
     nombre.value = "";
     email.value = "";
     password.value = "";
@@ -78,232 +77,379 @@ const registrarUsuario = async () => {
 
 <template>
   <main class="register-page">
-    <section class="register-card">
 
-      <!-- Nombre de la aplicación -->
-      <div class="brand">
-        <span class="brand-icon">✦</span>
-        <h1>EventHub</h1>
+    <!-- PANEL IZQUIERDO -->
+    <section class="welcome-panel">
+      <div class="welcome-content">
+
+        <div class="welcome-logo">
+          ✦ EventHub
+        </div>
+
+        <p class="welcome-label">
+          TU PLATAFORMA DE EVENTOS
+        </p>
+
+        <h1>
+          Grandes momentos
+          <span>comienzan contigo.</span>
+        </h1>
+
+        <p class="welcome-description">
+          Crea tu cuenta y forma parte de una comunidad
+          donde cada evento es una nueva oportunidad
+          para vivir experiencias inolvidables.
+        </p>
+
+        <div class="welcome-features">
+          <p>✦ Descubre nuevas experiencias</p>
+          <p>✦ Conecta con eventos de tu interés</p>
+          <p>✦ Organiza tus actividades</p>
+        </div>
+
       </div>
-
-      <p class="subtitle">
-        Vive experiencias inolvidables
-      </p>
-
-      <h2>Crear una cuenta</h2>
-
-      <p class="description">
-        Completa tus datos para unirte a EventHub.
-      </p>
-
-      <!-- Formulario de registro -->
-      <form @submit.prevent="registrarUsuario">
-
-        <!-- Nombre -->
-        <div class="field">
-          <label for="nombre">Nombre completo</label>
-          <input
-            id="nombre"
-            v-model="nombre"
-            type="text"
-            placeholder="Tu nombre completo"
-            autocomplete="name"
-            required
-          />
-        </div>
-
-        <!-- Correo electrónico -->
-        <div class="field">
-          <label for="email">Correo electrónico</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="correo@ejemplo.com"
-            autocomplete="email"
-            required
-          />
-        </div>
-
-        <!-- Contraseña -->
-        <div class="field">
-          <label for="password">Contraseña</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="Mínimo 8 caracteres"
-            autocomplete="new-password"
-            minlength="8"
-            required
-          />
-        </div>
-
-        <!-- Confirmar contraseña -->
-        <div class="field">
-          <label for="confirmarPassword">
-            Confirmar contraseña
-          </label>
-          <input
-            id="confirmarPassword"
-            v-model="confirmarPassword"
-            type="password"
-            placeholder="Repite tu contraseña"
-            autocomplete="new-password"
-            required
-          />
-        </div>
-
-        <!-- Mensaje de error -->
-        <p
-          v-if="error"
-          class="error-message"
-          role="alert"
-        >
-          {{ error }}
-        </p>
-
-        <!-- Mensaje de éxito -->
-        <p
-          v-if="exito"
-          class="success-message"
-          role="status"
-        >
-          {{ exito }}
-        </p>
-
-        <!-- Botón de registro -->
-        <button
-          type="submit"
-          class="register-button"
-          :disabled="cargando"
-        >
-          {{ cargando ? "Registrando..." : "Crear cuenta" }}
-        </button>
-
-      </form>
-
-      <!-- Enlace al login -->
-      <p class="login-text">
-        ¿Ya tienes una cuenta?
-        <router-link to="/login">
-          Inicia sesión
-        </router-link>
-      </p>
-
     </section>
+
+    <!-- PANEL DERECHO -->
+    <section class="register-panel">
+
+      <div class="register-content">
+
+        <div class="brand">
+          <span class="brand-icon">✦</span>
+          <h2>EventHub</h2>
+        </div>
+
+        <p class="subtitle">
+          Tu próximo evento comienza aquí
+        </p>
+
+        <h3>Crear una cuenta</h3>
+
+        <p class="description">
+          Completa tus datos para unirte a EventHub.
+        </p>
+
+        <form @submit.prevent="registrarUsuario">
+
+          <div class="field">
+            <label for="nombre">Nombre completo</label>
+
+            <input
+              id="nombre"
+              v-model="nombre"
+              type="text"
+              placeholder="Tu nombre completo"
+              autocomplete="name"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="email">Correo electrónico</label>
+
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              placeholder="correo@ejemplo.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="password">Contraseña</label>
+
+            <div class="password-wrapper">
+              <input
+                id="password"
+                v-model="password"
+                :type="mostrarPassword ? 'text' : 'password'"
+                placeholder="Mínimo 8 caracteres"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+
+              <button
+                type="button"
+                class="show-password"
+                @click="mostrarPassword = !mostrarPassword"
+              >
+                {{ mostrarPassword ? "Ocultar" : "Mostrar" }}
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="confirmarPassword">
+              Confirmar contraseña
+            </label>
+
+            <div class="password-wrapper">
+              <input
+                id="confirmarPassword"
+                v-model="confirmarPassword"
+                :type="mostrarConfirmacion ? 'text' : 'password'"
+                placeholder="Repite tu contraseña"
+                autocomplete="new-password"
+                required
+              />
+
+              <button
+                type="button"
+                class="show-password"
+                @click="mostrarConfirmacion = !mostrarConfirmacion"
+              >
+                {{ mostrarConfirmacion ? "Ocultar" : "Mostrar" }}
+              </button>
+            </div>
+          </div>
+
+          <p
+            v-if="error"
+            class="error-message"
+            role="alert"
+          >
+            {{ error }}
+          </p>
+
+          <p
+            v-if="exito"
+            class="success-message"
+            role="status"
+          >
+            {{ exito }}
+          </p>
+
+          <button
+            type="submit"
+            class="register-button"
+            :disabled="cargando"
+          >
+            {{ cargando ? "Registrando..." : "Crear cuenta" }}
+          </button>
+
+        </form>
+
+        <p class="login-text">
+          ¿Ya tienes una cuenta?
+
+          <router-link to="/login">
+            Inicia sesión
+          </router-link>
+        </p>
+
+      </div>
+    </section>
+
   </main>
 </template>
 
 <style scoped>
 .register-page {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: white;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* PANEL IZQUIERDO */
+
+.welcome-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  font-family: Arial, sans-serif;
+  padding: 70px;
+  background: linear-gradient(
+    145deg,
+    #0f172a,
+    #1e3a8a,
+    #2563eb
+  );
+  color: white;
 }
 
-.register-card {
+.welcome-content {
   width: 100%;
-  max-width: 440px;
-  padding: 36px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
+  max-width: 600px;
+}
+
+.welcome-logo {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 80px;
+}
+
+.welcome-label {
+  color: #bfdbfe;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+}
+
+.welcome-content h1 {
+  font-size: clamp(38px, 4vw, 64px);
+  line-height: 1.15;
+  margin: 0 0 28px;
+}
+
+.welcome-content h1 span {
+  display: block;
+  color: #93c5fd;
+}
+
+.welcome-description {
+  color: #dbeafe;
+  font-size: 19px;
+  line-height: 1.8;
+  max-width: 520px;
+}
+
+.welcome-features {
+  margin-top: 45px;
+}
+
+.welcome-features p {
+  color: #eff6ff;
+  font-size: 17px;
+  margin-bottom: 20px;
+}
+
+/* PANEL DERECHO */
+
+.register-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 55px 65px;
+  box-sizing: border-box;
+}
+
+.register-content {
+  width: 100%;
+  max-width: 480px;
 }
 
 .brand {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
   color: #2563eb;
 }
 
-.brand h1 {
+.brand h2 {
+  font-size: 36px;
   margin: 0;
-  font-size: 30px;
 }
 
 .brand-icon {
-  font-size: 32px;
+  font-size: 34px;
 }
 
 .subtitle {
   text-align: center;
   color: #64748b;
-  margin: 10px 0 28px;
+  font-size: 16px;
+  margin: 12px 0 38px;
 }
 
-h2 {
-  margin-bottom: 8px;
+h3 {
+  font-size: 30px;
   color: #0f172a;
+  margin: 0 0 12px;
 }
 
 .description {
+  font-size: 17px;
   color: #64748b;
-  margin-bottom: 24px;
+  margin: 0 0 28px;
 }
 
 .field {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 label {
   display: block;
-  margin-bottom: 8px;
+  font-size: 16px;
   font-weight: 600;
   color: #334155;
+  margin-bottom: 10px;
 }
 
 input {
   width: 100%;
-  box-sizing: border-box;
-  padding: 13px 14px;
+  padding: 17px 18px;
   border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  font-size: 15px;
-  background: #ffffff;
+  border-radius: 12px;
+  font-size: 17px;
+  box-sizing: border-box;
+  background: white;
   color: #0f172a;
 }
 
 input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  padding-right: 100px;
+}
+
+.show-password {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .error-message {
   color: #dc2626;
   background: #fef2f2;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
   line-height: 1.5;
+  margin-bottom: 18px;
 }
 
 .success-message {
   color: #15803d;
   background: #f0fdf4;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
   line-height: 1.5;
+  margin-bottom: 18px;
 }
 
 .register-button {
   width: 100%;
-  padding: 14px;
+  padding: 18px;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 9px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -318,13 +464,82 @@ input:focus {
 
 .login-text {
   text-align: center;
-  margin-top: 26px;
   color: #64748b;
+  font-size: 16px;
+  margin-top: 30px;
 }
 
 .login-text a {
   color: #2563eb;
   font-weight: 600;
   text-decoration: none;
+}
+
+.login-text a:hover {
+  text-decoration: underline;
+}
+
+/* TABLETAS */
+
+@media (max-width: 900px) {
+  .register-page {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-panel {
+    padding: 40px 28px;
+  }
+
+  .welcome-logo {
+    margin-bottom: 24px;
+  }
+
+  .welcome-content h1 {
+    font-size: 34px;
+  }
+
+  .welcome-description {
+    font-size: 16px;
+  }
+
+  .welcome-features {
+    display: none;
+  }
+
+  .register-panel {
+    padding: 50px 30px;
+  }
+
+  .register-content {
+    max-width: 600px;
+  }
+}
+
+/* CELULARES */
+
+@media (max-width: 480px) {
+  .welcome-panel {
+    padding: 30px 22px;
+  }
+
+  .welcome-content h1 {
+    font-size: 29px;
+  }
+
+  .register-panel {
+    padding: 36px 22px;
+  }
+
+  .brand h2 {
+    font-size: 30px;
+  }
+
+  h3 {
+    font-size: 25px;
+  }
+
+  input {
+    font-size: 16px;
+  }
 }
 </style>

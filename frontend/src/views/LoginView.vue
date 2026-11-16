@@ -193,7 +193,7 @@ onMounted(async () => {
         shape: "rectangular",
         text: "continue_with",
         logo_alignment: "left",
-        width: 320
+        width: 390
       }
     );
 
@@ -214,6 +214,39 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="login-page">
+
+    <!-- PANEL IZQUIERDO: BIENVENIDA -->
+    <section class="welcome-panel">
+      <div class="welcome-content">
+
+        <div class="welcome-logo">
+          ✦ EventHub
+        </div>
+
+        <p class="welcome-label">
+          TU PLATAFORMA DE EVENTOS
+        </p>
+
+        <h1>
+          Cada gran experiencia
+          <span>comienza aquí.</span>
+        </h1>
+
+        <p class="welcome-description">
+          Descubre eventos, conecta con nuevas experiencias
+          y organiza momentos inolvidables en un solo lugar.
+        </p>
+
+        <div class="welcome-features">
+          <p>✦ Descubre eventos de tu interés</p>
+          <p>✦ Organiza y administra tus eventos</p>
+          <p>✦ Vive experiencias únicas</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PANEL DERECHO: INICIO DE SESIÓN -->
     <section class="login-card">
 
       <div class="brand">
@@ -235,6 +268,7 @@ onBeforeUnmount(() => {
 
         <div class="field">
           <label for="email">Correo electrónico</label>
+
           <input
             id="email"
             v-model="email"
@@ -311,9 +345,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="google-section">
-        <div ref="googleButton" class="google-button"></div>
 
-        <p v-if="cargandoGoogle" class="google-loading">
+        <div
+          ref="googleButton"
+          class="google-button"
+        ></div>
+
+        <p
+          v-if="cargandoGoogle"
+          class="google-loading"
+        >
           Iniciando sesión con Google...
         </p>
 
@@ -323,97 +364,168 @@ onBeforeUnmount(() => {
         >
           Cargando Google...
         </p>
+
       </div>
 
       <p class="register-text">
         ¿Todavía no tienes cuenta?
+
         <router-link to="/register">
           Regístrate aquí
         </router-link>
       </p>
 
     </section>
+
   </main>
 </template>
+
+
+
 
 <style scoped>
 .login-page {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   font-family: Arial, sans-serif;
+  background: #ffffff;
 }
 
-.login-card {
+/* PANEL IZQUIERDO */
+.welcome-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 70px;
+  color: white;
+  background: linear-gradient(145deg, #0f172a, #1e3a8a, #2563eb);
+}
+
+.welcome-content {
   width: 100%;
-  max-width: 430px;
-  padding: 40px 34px;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
+  max-width: 600px;
+}
+
+.welcome-logo {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 80px;
+}
+
+.welcome-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #bfdbfe;
+  margin-bottom: 24px;
+}
+
+.welcome-content h1 {
+  font-size: clamp(38px, 4vw, 64px);
+  line-height: 1.15;
+  margin: 0 0 28px;
+}
+
+.welcome-content h1 span {
+  display: block;
+  color: #93c5fd;
+}
+
+.welcome-description {
+  font-size: 19px;
+  line-height: 1.8;
+  color: #dbeafe;
+  max-width: 520px;
+}
+
+.welcome-features {
+  margin-top: 45px;
+}
+
+.welcome-features p {
+  font-size: 17px;
+  margin-bottom: 20px;
+  color: #eff6ff;
+}
+
+/* PANEL DERECHO */
+.login-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 620px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 65px 75px;
+  box-sizing: border-box;
+  background: white;
 }
 
 .brand {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: #2563eb;
 }
 
 .brand h1 {
+  font-size: 36px;
   margin: 0;
-  font-size: 30px;
 }
 
 .brand-icon {
-  font-size: 32px;
+  font-size: 34px;
 }
 
 .subtitle {
   text-align: center;
   color: #64748b;
-  margin: 10px 0 30px;
+  font-size: 16px;
+  margin: 12px 0 48px;
 }
 
 h2 {
+  font-size: 30px;
   color: #0f172a;
-  margin-bottom: 8px;
+  margin: 0 0 12px;
 }
 
 .description {
+  font-size: 17px;
   color: #64748b;
-  margin-bottom: 26px;
+  margin: 0 0 30px;
 }
 
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 label {
   display: block;
+  font-size: 16px;
   font-weight: 600;
   color: #334155;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 input {
   width: 100%;
-  padding: 13px 14px;
+  padding: 18px 20px;
   border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  font-size: 15px;
+  border-radius: 12px;
+  font-size: 17px;
   box-sizing: border-box;
-  background: #ffffff;
+  background: white;
   color: #0f172a;
 }
 
 input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .password-wrapper {
@@ -421,19 +533,19 @@ input:focus {
 }
 
 .password-wrapper input {
-  padding-right: 85px;
+  padding-right: 100px;
 }
 
 .show-password {
   position: absolute;
-  right: 10px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: transparent;
   color: #2563eb;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .forgot {
@@ -441,43 +553,41 @@ input:focus {
   text-align: right;
   color: #2563eb;
   text-decoration: none;
-  font-size: 14px;
-  margin-bottom: 24px;
+  font-size: 15px;
+  margin-bottom: 28px;
 }
 
 .forgot:hover {
   text-decoration: underline;
 }
 
+.error-message,
+.success-message {
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+
 .error-message {
   color: #dc2626;
   background: #fef2f2;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
-  line-height: 1.5;
 }
 
 .success-message {
   color: #15803d;
   background: #f0fdf4;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
-  line-height: 1.5;
 }
 
 .login-button {
   width: 100%;
-  padding: 14px;
+  padding: 19px;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 9px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -494,9 +604,9 @@ input:focus {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 25px 0 20px;
+  margin: 30px 0 24px;
   color: #64748b;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .separator::before,
@@ -521,16 +631,16 @@ input:focus {
 }
 
 .google-loading {
-  font-size: 13px;
   color: #64748b;
-  margin-top: 10px;
-  text-align: center;
+  font-size: 14px;
+  margin-top: 12px;
 }
 
 .register-text {
   text-align: center;
-  margin-top: 28px;
+  margin-top: 34px;
   color: #64748b;
+  font-size: 16px;
 }
 
 .register-text a {
@@ -541,5 +651,60 @@ input:focus {
 
 .register-text a:hover {
   text-decoration: underline;
+}
+
+/* TABLETAS Y CELULARES */
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-panel {
+    padding: 40px 28px;
+  }
+
+  .welcome-logo {
+    margin-bottom: 24px;
+  }
+
+  .welcome-content h1 {
+    font-size: 34px;
+  }
+
+  .welcome-description {
+    font-size: 16px;
+  }
+
+  .welcome-features {
+    display: none;
+  }
+
+  .login-card {
+    min-height: auto;
+    max-width: 600px;
+    padding: 50px 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-panel {
+    padding: 30px 22px;
+  }
+
+  .welcome-content h1 {
+    font-size: 29px;
+  }
+
+  .login-card {
+    padding: 36px 22px;
+  }
+
+  .brand h1 {
+    font-size: 30px;
+  }
+
+  h2 {
+    font-size: 25px;
+  }
 }
 </style>

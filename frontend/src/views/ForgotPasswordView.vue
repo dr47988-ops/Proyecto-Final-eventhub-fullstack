@@ -58,192 +58,311 @@ const recuperarPassword = async () => {
 
 <template>
   <main class="recovery-page">
-    <section class="recovery-card">
 
-      <div class="brand">
-        <span class="brand-icon">✦</span>
-        <h1>EventHub</h1>
-      </div>
+    <!-- PANEL IZQUIERDO -->
+    <section class="welcome-panel">
+      <div class="welcome-content">
 
-      <p class="subtitle">
-        Tu próximo evento comienza aquí
-      </p>
-
-      <h2>Recuperar contraseña</h2>
-
-      <p class="description">
-        Ingresa tu correo electrónico y te enviaremos
-        un enlace para crear una nueva contraseña.
-      </p>
-
-      <form @submit.prevent="recuperarPassword">
-
-        <div class="field">
-          <label for="email">
-            Correo electrónico
-          </label>
-
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="correo@ejemplo.com"
-            autocomplete="email"
-            required
-          />
+        <div class="welcome-logo">
+          ✦ EventHub
         </div>
 
-        <p
-          v-if="error"
-          class="error-message"
-          role="alert"
-        >
-          {{ error }}
+        <p class="welcome-label">
+          TU PLATAFORMA DE EVENTOS
         </p>
 
-        <p
-          v-if="exito"
-          class="success-message"
-          role="status"
-        >
-          {{ exito }}
+        <h1>
+          Siempre hay una forma
+          <span>de volver a conectar.</span>
+        </h1>
+
+        <p class="welcome-description">
+          Recupera el acceso a tu cuenta y continúa
+          disfrutando de todas las experiencias
+          que EventHub tiene para ti.
         </p>
 
-        <button
-          type="submit"
-          class="recovery-button"
-          :disabled="cargando"
-        >
-          {{
-            cargando
-              ? "Enviando solicitud..."
-              : "Enviar enlace de recuperación"
-          }}
-        </button>
+        <div class="welcome-features">
+          <p>✦ Recupera tu acceso fácilmente</p>
+          <p>✦ Mantén tu cuenta protegida</p>
+          <p>✦ Continúa viviendo nuevas experiencias</p>
+        </div>
 
-      </form>
-
-      <p class="back-text">
-        ¿Recordaste tu contraseña?
-        <router-link to="/login">
-          Volver a iniciar sesión
-        </router-link>
-      </p>
-
+      </div>
     </section>
+
+    <!-- PANEL DERECHO -->
+    <section class="recovery-panel">
+
+      <div class="recovery-content">
+
+        <div class="brand">
+          <span class="brand-icon">✦</span>
+          <h2>EventHub</h2>
+        </div>
+
+        <p class="subtitle">
+          Tu próximo evento comienza aquí
+        </p>
+
+        <div class="recovery-icon">🔐</div>
+
+        <h3>Recuperar contraseña</h3>
+
+        <p class="description">
+          Ingresa tu correo electrónico y te enviaremos
+          un enlace para crear una nueva contraseña.
+        </p>
+
+        <form @submit.prevent="recuperarPassword">
+
+          <div class="field">
+            <label for="email">
+              Correo electrónico
+            </label>
+
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              placeholder="correo@ejemplo.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <p
+            v-if="error"
+            class="error-message"
+            role="alert"
+          >
+            {{ error }}
+          </p>
+
+          <p
+            v-if="exito"
+            class="success-message"
+            role="status"
+          >
+            {{ exito }}
+          </p>
+
+          <button
+            type="submit"
+            class="recovery-button"
+            :disabled="cargando"
+          >
+            {{
+              cargando
+                ? "Enviando solicitud..."
+                : "Enviar enlace de recuperación"
+            }}
+          </button>
+
+        </form>
+
+        <p class="back-text">
+          ¿Recordaste tu contraseña?
+
+          <router-link to="/login">
+            Volver a iniciar sesión
+          </router-link>
+        </p>
+
+      </div>
+    </section>
+
   </main>
 </template>
 
 <style scoped>
 .recovery-page {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #ffffff;
   font-family: Arial, sans-serif;
+  box-sizing: border-box;
 }
 
-.recovery-card {
+/* PANEL IZQUIERDO */
+
+.welcome-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 70px;
+  color: white;
+  background: linear-gradient(
+    145deg,
+    #0f172a,
+    #1e3a8a,
+    #2563eb
+  );
+}
+
+.welcome-content {
   width: 100%;
-  max-width: 430px;
-  padding: 40px 34px;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
+  max-width: 600px;
+}
+
+.welcome-logo {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 80px;
+}
+
+.welcome-label {
+  color: #bfdbfe;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+}
+
+.welcome-content h1 {
+  font-size: clamp(38px, 4vw, 64px);
+  line-height: 1.15;
+  margin: 0 0 28px;
+}
+
+.welcome-content h1 span {
+  display: block;
+  color: #93c5fd;
+}
+
+.welcome-description {
+  color: #dbeafe;
+  font-size: 19px;
+  line-height: 1.8;
+  max-width: 520px;
+}
+
+.welcome-features {
+  margin-top: 45px;
+}
+
+.welcome-features p {
+  color: #eff6ff;
+  font-size: 17px;
+  margin-bottom: 20px;
+}
+
+/* PANEL DERECHO */
+
+.recovery-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 65px;
+  box-sizing: border-box;
+}
+
+.recovery-content {
+  width: 100%;
+  max-width: 480px;
 }
 
 .brand {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: #2563eb;
 }
 
-.brand h1 {
+.brand h2 {
+  font-size: 36px;
   margin: 0;
-  font-size: 30px;
 }
 
 .brand-icon {
-  font-size: 32px;
+  font-size: 34px;
 }
 
 .subtitle {
   text-align: center;
   color: #64748b;
-  margin: 10px 0 30px;
+  font-size: 16px;
+  margin: 12px 0 45px;
 }
 
-h2 {
+.recovery-icon {
+  font-size: 42px;
+  margin-bottom: 20px;
+}
+
+h3 {
   color: #0f172a;
-  margin-bottom: 8px;
+  font-size: 30px;
+  margin: 0 0 14px;
 }
 
 .description {
   color: #64748b;
-  margin-bottom: 26px;
-  line-height: 1.6;
+  font-size: 17px;
+  line-height: 1.7;
+  margin-bottom: 30px;
 }
 
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 label {
   display: block;
+  font-size: 16px;
   font-weight: 600;
   color: #334155;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 input {
   width: 100%;
-  padding: 13px 14px;
+  padding: 18px 20px;
   border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  font-size: 15px;
+  border-radius: 12px;
+  font-size: 17px;
   box-sizing: border-box;
-  background: #ffffff;
+  background: white;
   color: #0f172a;
 }
 
 input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .error-message {
   color: #dc2626;
   background: #fef2f2;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
   line-height: 1.5;
+  margin-bottom: 18px;
 }
 
 .success-message {
   color: #15803d;
   background: #f0fdf4;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
   line-height: 1.5;
+  margin-bottom: 18px;
 }
 
 .recovery-button {
   width: 100%;
-  padding: 14px;
+  padding: 18px;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 9px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -258,8 +377,10 @@ input:focus {
 
 .back-text {
   text-align: center;
-  margin-top: 28px;
+  margin-top: 30px;
   color: #64748b;
+  font-size: 16px;
+  line-height: 1.7;
 }
 
 .back-text a {
@@ -270,5 +391,69 @@ input:focus {
 
 .back-text a:hover {
   text-decoration: underline;
+}
+
+/* TABLETAS */
+
+@media (max-width: 900px) {
+  .recovery-page {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-panel {
+    padding: 40px 28px;
+  }
+
+  .welcome-logo {
+    margin-bottom: 24px;
+  }
+
+  .welcome-content h1 {
+    font-size: 34px;
+  }
+
+  .welcome-description {
+    font-size: 16px;
+  }
+
+  .welcome-features {
+    display: none;
+  }
+
+  .recovery-panel {
+    padding: 50px 30px;
+  }
+
+  .recovery-content {
+    max-width: 600px;
+  }
+}
+
+/* CELULARES */
+
+@media (max-width: 480px) {
+  .welcome-panel {
+    padding: 30px 22px;
+  }
+
+  .welcome-content h1 {
+    font-size: 29px;
+  }
+
+  .recovery-panel {
+    padding: 36px 22px;
+  }
+
+  .brand h2 {
+    font-size: 30px;
+  }
+
+  h3 {
+    font-size: 25px;
+  }
+
+  input {
+    font-size: 16px;
+  }
 }
 </style>

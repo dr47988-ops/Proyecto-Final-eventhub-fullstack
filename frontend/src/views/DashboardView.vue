@@ -2,14 +2,23 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import {
-  authState,
-  logoutSession
-} from "../services/authService";
+import { authState, logoutSession } from "../services/authService";
 
 const router = useRouter();
 const cerrandoSesion = ref(false);
 const errorLogout = ref("");
+
+const usuario = computed(() => authState.user);
+
+const nombreRol = computed(() => {
+  const roles = {
+    attendee: "Asistente",
+    organizer: "Organizador",
+    admin: "Administrador"
+  };
+
+  return roles[usuario.value?.role] || "Usuario";
+});
 
 const cerrarSesion = async () => {
   cerrandoSesion.value = true;
@@ -24,204 +33,176 @@ const cerrarSesion = async () => {
       errorLogout.value =
         "No se pudo cerrar la sesión. Inténtalo nuevamente.";
     }
+  } catch (error) {
+    errorLogout.value =
+      "Ocurrió un error al cerrar la sesión.";
   } finally {
     cerrandoSesion.value = false;
   }
 };
-
-// Información del usuario autenticado
-const usuario = computed(() => authState.user);
-
-// Mostrar el rol en español
-const nombreRol = computed(() => {
-  const roles = {
-    attendee: "Asistente",
-    organizer: "Organizador",
-    admin: "Administrador"
-  };
-
-  return roles[usuario.value?.role] || "Usuario";
-});
 </script>
+
 
 <template>
   <main class="dashboard-page">
-    <section class="dashboard-card">
 
-      <div class="brand">
-        <span class="brand-icon">✦</span>
-        <h1>EventHub</h1>
-      </div>
+    <!-- BARRA SUPERIOR -->
+    <header class="navbar">
+      <div class="navbar-content">
+        <div class="logo">✦ EventHub</div>
 
-      <p class="subtitle">
-        Tu próximo evento comienza aquí
-      </p>
+        <div class="navbar-actions">
+          <span class="navbar-user">
+            {{ usuario?.name || "Usuario" }}
+          </span>
 
-      <div class="welcome-icon">🎉</div>
-
-      <h2>
-        ¡Bienvenido{{ usuario ? `, ${usuario.name}` : "" }}!
-      </h2>
-
-      <p class="description">
-        Has iniciado sesión en EventHub.
-      </p>
-
-      <div class="user-info">
-        <div class="info-item">
-          <span>Correo electrónico</span>
-          <strong>{{ usuario?.email || "No disponible" }}</strong>
-        </div>
-
-        <div class="info-item">
-          <span>Rol</span>
-          <strong>{{ nombreRol }}</strong>
-        </div>
-
-        <div class="info-item">
-          <span>Estado de la cuenta</span>
-          <strong class="verified">
-            {{ usuario?.isEmailVerified ? "✓ Verificada" : "Pendiente" }}
-          </strong>
+          <button
+            class="logout-button"
+            type="button"
+            :disabled="cerrandoSesion"
+            @click="cerrarSesion"
+          >
+            {{ cerrandoSesion ? "Cerrando..." : "Cerrar sesión" }}
+          </button>
         </div>
       </div>
+    </header>
 
-      <p class="footer-text">
-        Próximamente podrás explorar eventos y gestionar
-        tus actividades desde esta pantalla.
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="dashboard-content">
+
+      <!-- BIENVENIDA -->
+      <section class="welcome-section">
+        <span class="section-label">PANEL PRINCIPAL</span>
+
+        <h1>
+          ¡Bienvenido{{ usuario ? `, ${usuario.name}` : "" }}!
+          🎉
+        </h1>
+
+        <p>
+          Consulta la información de tu cuenta y disfruta
+          de tu experiencia en EventHub.
+        </p>
+      </section>
+
+      <!-- MENSAJE DE ERROR AL CERRAR SESIÓN -->
+      <p
+        v-if="errorLogout"
+        class="logout-error"
+        role="alert"
+      >
+        {{ errorLogout }}
       </p>
 
-      <p v-if="errorLogout" class="logout-error" role="alert">
-  {{ errorLogout }}
-</p>
+      <!-- TARJETAS DE INFORMACIÓN -->
+      <section class="cards-grid">
 
-<button
-  type="button"
-  class="logout-button"
-  :disabled="cerrandoSesion"
-  @click="cerrarSesion"
->
-  {{ cerrandoSesion ? "Cerrando sesión..." : "Cerrar sesión" }}
-</button>
+        <!-- MI CUENTA -->
+        <article class="info-card">
+          <div class="card-icon">👤</div>
+          <h2>Mi cuenta</h2>
 
-    </section>
+          <div class="info-row">
+            <span>Nombre</span>
+            <strong>
+              {{ usuario?.name || "No disponible" }}
+            </strong>
+          </div>
+
+          <div class="info-row">
+            <span>Correo electrónico</span>
+            <strong>
+              {{ usuario?.email || "No disponible" }}
+            </strong>
+          </div>
+        </article>
+
+        <!-- INFORMACIÓN DE ACCESO -->
+        <article class="info-card">
+          <div class="card-icon">🛡️</div>
+          <h2>Información de acceso</h2>
+
+          <div class="info-row">
+            <span>Rol</span>
+            <strong>{{ nombreRol }}</strong>
+          </div>
+
+          <div class="info-row">
+            <span>Estado del correo</span>
+
+            <strong
+              :class="usuario?.isEmailVerified ? 'verified' : 'pending'"
+            >
+              {{
+                usuario?.isEmailVerified
+                  ? "✓ Verificado"
+                  : "Pendiente de verificación"
+              }}
+            </strong>
+          </div>
+        </article>
+
+      </section>
+
+    </div>
   </main>
 </template>
 
 <style scoped>
 .dashboard-page {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  padding: 24px;
+  background: #f3f6fc;
   font-family: Arial, sans-serif;
+  color: #0f172a;
 }
 
-.dashboard-card {
-  width: 100%;
-  max-width: 500px;
-  padding: 40px 34px;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
-  text-align: center;
+/* BARRA SUPERIOR */
+.navbar {
+  background: linear-gradient(110deg, #0f172a, #1e3a8a);
+  padding: 22px 36px;
+  color: white;
 }
 
-.brand {
+.navbar-content {
+  max-width: 1250px;
+  margin: auto;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
-  color: #2563eb;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.brand h1 {
-  margin: 0;
+.logo {
   font-size: 30px;
+  font-weight: 700;
+  color: white;
 }
 
-.brand-icon {
-  font-size: 32px;
-}
-
-.subtitle {
-  color: #64748b;
-  margin: 10px 0 30px;
-}
-
-.welcome-icon {
-  font-size: 50px;
-  margin-bottom: 15px;
-}
-
-h2 {
-  color: #0f172a;
-  margin-bottom: 10px;
-}
-
-.description {
-  color: #64748b;
-  margin-bottom: 28px;
-}
-
-.user-info {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: left;
-}
-
-.info-item {
+.navbar-actions {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 0;
-  border-bottom: 1px solid #e2e8f0;
+  align-items: center;
+  gap: 22px;
 }
 
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.info-item span {
-  color: #64748b;
-  font-size: 14px;
-}
-
-.info-item strong {
-  color: #0f172a;
-  font-size: 15px;
-  overflow-wrap: anywhere;
-}
-
-.info-item .verified {
-  color: #15803d;
-}
-
-.footer-text {
-  margin-top: 26px;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
+.navbar-user {
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .logout-button {
-  width: 100%;
-  margin-top: 24px;
-  padding: 14px;
-  background: #dc2626;
-  color: white;
+  padding: 12px 22px;
+  background: #ffffff;
+  color: #1e3a8a;
   border: none;
-  border-radius: 9px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .logout-button:hover:not(:disabled) {
-  background: #b91c1c;
+  background: #dbeafe;
 }
 
 .logout-button:disabled {
@@ -229,9 +210,190 @@ h2 {
   cursor: not-allowed;
 }
 
-.logout-error {
-  color: #dc2626;
+/* CONTENIDO */
+.dashboard-content {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 60px 36px;
+  box-sizing: border-box;
+}
+
+.welcome-section {
+  margin-bottom: 42px;
+}
+
+.section-label {
+  color: #2563eb;
   font-size: 14px;
-  margin-top: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.welcome-section h1 {
+  font-size: clamp(30px, 3.5vw, 46px);
+  color: #0f172a;
+  margin: 18px 0;
+}
+
+.welcome-section p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #64748b;
+  max-width: 780px;
+}
+
+/* TARJETAS */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.info-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 34px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  min-width: 0;
+}
+
+.card-icon {
+  font-size: 34px;
+  margin-bottom: 18px;
+}
+
+.info-card h2 {
+  font-size: 23px;
+  margin: 0 0 26px;
+  color: #0f172a;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row span {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.info-row strong {
+  font-size: 17px;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.info-row .verified {
+  color: #15803d;
+}
+
+.info-row .pending {
+  color: #b45309;
+}
+
+/* PRÓXIMAMENTE */
+.coming-soon {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  background: #e8f0ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 18px;
+  padding: 32px;
+  margin-top: 32px;
+}
+
+.coming-icon {
+  font-size: 42px;
+}
+
+.coming-soon h2 {
+  color: #1e3a8a;
+  font-size: 22px;
+  margin: 0 0 10px;
+}
+
+.coming-soon p {
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.logout-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 18px 20px;
+  }
+
+  .navbar-content {
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-size: 25px;
+  }
+
+  .navbar-actions {
+    gap: 12px;
+  }
+
+  .navbar-user {
+    font-size: 14px;
+  }
+
+  .dashboard-content {
+    padding: 38px 20px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-card {
+    padding: 26px;
+  }
+
+  .coming-soon {
+    align-items: flex-start;
+    padding: 24px;
+  }
+
+  .welcome-section p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .logout-button {
+    padding: 10px 14px;
+  }
+
+  .coming-soon {
+    flex-direction: column;
+  }
 }
 </style>
