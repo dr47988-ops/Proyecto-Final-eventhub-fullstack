@@ -3,7 +3,9 @@ const express = require("express");
 
 const {
   register,
-  login
+  login,
+  refresh,
+  logout
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -16,6 +18,12 @@ router.post("/register", register);
 
 // Iniciar sesión
 router.post("/login", login);
+
+// Renovar tokens JWT
+router.post("/refresh", refresh);
+
+// Cerrar sesión
+router.post("/logout", logout);
 
 // Consultar perfil del usuario autenticado
 router.get("/profile", authMiddleware, (req, res) => {

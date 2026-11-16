@@ -3,12 +3,17 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+const {
+  createRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken
+} = require("../services/tokenService");
 // ======================================
 // REGISTRAR UN NUEVO USUARIO
 // ======================================
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
 
     // Validar campos obligatorios
     if (
@@ -80,7 +85,10 @@ const register = async (req, res) => {
       });
     }
 
-    console.error("Error al registrar usuario:", error.message);
+    console.error(
+      "Error al registrar usuario:",
+      error.message
+    );
 
     return res.status(500).json({
       message: "Error interno del servidor"
@@ -93,7 +101,7 @@ const register = async (req, res) => {
 // ======================================
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
     // Validar datos obligatorios
     if (
@@ -137,23 +145,22 @@ const login = async (req, res) => {
       });
     }
 
-    // Generar token de acceso
+    // Generar access token
     const accessToken = jwt.sign(
       {
         userId: user._id.toString(),
         role: user.role
       },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      {
+        expiresIn: "15m",
+        algorithm: "HS256"
+      }
     );
 
-    // Generar token de renovación
-    const refreshToken = jwt.sign(
-      {
-        userId: user._id.toString()
-      },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" }
+    // Generar y guardar refresh token en MongoDB
+    const refreshToken = await createRefreshToken(
+      user._id
     );
 
     // Respuesta exitosa
@@ -170,7 +177,10 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error al iniciar sesión:", error.message);
+    console.error(
+      "Error al iniciar sesión:",
+      error.message
+    );
 
     return res.status(500).json({
       message: "Error interno del servidor"
@@ -178,8 +188,149 @@ const login = async (req, res) => {
   }
 };
 
-// Exportar funciones
+// ======================================
+// RENOVAR TOKENS JWT
+// ======================================
+const refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+
+    // Validar que se reciba el refresh token
+    if (
+      typeof refreshToken !== "string" ||
+      !refreshToken.trim()
+    ) {
+      return res.status(400).json({
+        message: "Refresh token obligatorio"
+      });
+    }
+
+    // Verificar firma y vencimiento
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET,
+      {
+        algorithms: ["HS256"]
+      }
+    );
+
+    // Verificar que el usuario exista y esté activo
+    const user = await User.findById(decoded.userId);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        message: "Sesión no autorizada"
+      });
+    }
+
+    // Revocar el token anterior y generar uno nuevo
+    const result = await rotateRefreshToken(
+      refreshToken
+    );
+
+    if (!result) {
+      return res.status(401).json({
+        message: "Refresh token inválido o revocado"
+      });
+    }
+
+    // Generar nuevo access token
+    const accessToken = jwt.sign(
+      {
+        userId: user._id.toString(),
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "15m",
+        algorithm: "HS256"
+      }
+    );
+
+    // Devolver los nuevos tokens
+    return res.status(200).json({
+      message: "Tokens renovados correctamente",
+      accessToken,
+      refreshToken: result.refreshToken
+    });
+
+  } catch (error) {
+    if (
+      error.name === "TokenExpiredError" ||
+      error.name === "JsonWebTokenError" ||
+      error.name === "NotBeforeError"
+    ) {
+      return res.status(401).json({
+        message: "Refresh token inválido o expirado"
+      });
+    }
+
+    console.error(
+      "Error al renovar tokens:",
+      error.message
+    );
+
+    return res.status(500).json({
+      message: "Error interno del servidor"
+    });
+  }
+};
+
+
+ // ======================================
+ // CERRAR SESIÓN (LOGOUT)
+ // ======================================
+ const logout = async (req, res) => {
+   try {
+     const { refreshToken } = req.body || {};
+
+     if (
+       typeof refreshToken !== "string" ||
+       !refreshToken.trim()
+     ) {
+       return res.status(400).json({
+         message: "Refresh token obligatorio"
+       });
+     }
+
+     const revoked = await revokeRefreshToken(refreshToken);
+
+     if (!revoked) {
+       return res.status(401).json({
+         message: "Refresh token inválido o revocado"
+       });
+     }
+
+     return res.status(200).json({
+       message: "Sesión cerrada correctamente"
+     });
+
+   } catch (error) {
+     if (
+       error.name === "TokenExpiredError" ||
+       error.name === "JsonWebTokenError" ||
+       error.name === "NotBeforeError"
+     ) {
+       return res.status(401).json({
+         message: "Refresh token inválido o expirado"
+       });
+     }
+
+     console.error("Error al cerrar sesión:", error.message);
+
+     return res.status(500).json({
+       message: "Error interno del servidor"
+     });
+   }
+ };
+
+
+// ======================================
+// EXPORTAR FUNCIONES
+// ======================================
 module.exports = {
   register,
-  login
+  login,
+  refresh,
+  logout
 };
