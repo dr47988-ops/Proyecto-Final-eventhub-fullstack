@@ -1,4 +1,4 @@
-
+﻿
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -11,14 +11,16 @@ const userSchema = new mongoose.Schema(
       maxlength: 100
     },
 
-    email: {
-      type: String,
-      required: [true, "El correo es obligatorio"],
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Correo inválido"]
-    },
+
+email: {
+  type: String,
+  required: [true, "El correo es obligatorio"],
+  unique: true,
+  lowercase: true,
+  trim: true,
+  match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Correo invÃ¡lido"]
+},
+
 
     password: {
       type: String,

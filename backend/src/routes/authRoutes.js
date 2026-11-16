@@ -5,7 +5,8 @@ const {
   register,
   login,
   refresh,
-  logout
+  logout,
+  verifyEmail
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -24,6 +25,9 @@ router.post("/refresh", refresh);
 
 // Cerrar sesión
 router.post("/logout", logout);
+
+// Verificar correo electrónico
+router.post("/verify-email", verifyEmail);
 
 // Consultar perfil del usuario autenticado
 router.get("/profile", authMiddleware, (req, res) => {
@@ -45,8 +49,7 @@ router.get(
   }
 );
 
-
- // Ruta de prueba exclusiva para organizadores
+// Ruta de prueba exclusiva para organizadores
 router.get(
   "/organizer-test",
   authMiddleware,
@@ -57,6 +60,5 @@ router.get(
     });
   }
 );
-
 
 module.exports = router;
