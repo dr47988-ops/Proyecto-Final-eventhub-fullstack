@@ -1,6 +1,10 @@
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useRouter } from "vue-router";
+import { setSession } from "../services/authService";
+
+const router = useRouter();
 
 const nombre = ref("");
 const email = ref("");
@@ -14,6 +18,14 @@ const cargando = ref(false);
 const mostrarPassword = ref(false);
 const mostrarConfirmacion = ref(false);
 
+// GOOGLE
+const googleButton = ref(null);
+const cargandoGoogle = ref(false);
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// ======================================
+// REGISTRO CON CORREO Y CONTRASEÑA
+// ======================================
 const registrarUsuario = async () => {
   error.value = "";
   exito.value = "";
@@ -73,7 +85,150 @@ const registrarUsuario = async () => {
     cargando.value = false;
   }
 };
+
+// ======================================
+// REGISTRO CON GOOGLE
+// ======================================
+const registrarConGoogle = async (respuestaGoogle) => {
+  error.value = "";
+  exito.value = "";
+
+  if (cargandoGoogle.value) return;
+
+  if (!respuestaGoogle?.credential) {
+    error.value = "Google no devolvió una credencial válida.";
+    return;
+  }
+
+  cargandoGoogle.value = true;
+
+  try {
+    const respuesta = await fetch(
+      "http://localhost:3000/api/auth/google",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          credential: respuestaGoogle.credential
+        })
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok) {
+      error.value =
+        datos.message ||
+        datos.error ||
+        "No se pudo completar el registro con Google.";
+      return;
+    }
+
+    if (!datos.user || !datos.accessToken) {
+      throw new Error("Respuesta de autenticación incompleta");
+    }
+
+    setSession(datos.user, datos.accessToken);
+
+    await router.replace("/dashboard");
+
+  } catch (err) {
+    console.error("Error de registro con Google:", err);
+    error.value =
+      "No se pudo completar el acceso con Google. Inténtalo nuevamente.";
+  } finally {
+    cargandoGoogle.value = false;
+  }
+};
+
+// ======================================
+// CARGAR GOOGLE IDENTITY SERVICES
+// ======================================
+const cargarGoogle = () => {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    const scriptExistente = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+
+    if (scriptExistente) {
+      scriptExistente.addEventListener("load", () => resolve(), {
+        once: true
+      });
+      scriptExistente.addEventListener(
+        "error",
+        () => reject(new Error("No se pudo cargar Google")),
+        { once: true }
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error("No se pudo cargar Google"));
+
+    document.head.appendChild(script);
+  });
+};
+
+onMounted(async () => {
+  if (!googleClientId) {
+    console.warn("Falta configurar Google en el frontend.");
+    return;
+  }
+
+  try {
+    await cargarGoogle();
+    await nextTick();
+
+    if (!googleButton.value) return;
+
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: registrarConGoogle,
+      ux_mode: "popup",
+      auto_select: false
+    });
+
+    window.google.accounts.id.renderButton(
+      googleButton.value,
+      {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: "signup_with",
+        logo_alignment: "left",
+        width: 390
+      }
+    );
+
+  } catch (err) {
+    console.error("Error al cargar Google:", err);
+    error.value =
+      "No se pudo cargar el registro con Google.";
+  }
+});
+
+onBeforeUnmount(() => {
+  if (window.google?.accounts?.id) {
+    window.google.accounts.id.cancel();
+  }
+});
 </script>
+
+
 
 <template>
   <main class="register-page">
@@ -134,7 +289,6 @@ const registrarUsuario = async () => {
 
           <div class="field">
             <label for="nombre">Nombre completo</label>
-
             <input
               id="nombre"
               v-model="nombre"
@@ -147,7 +301,6 @@ const registrarUsuario = async () => {
 
           <div class="field">
             <label for="email">Correo electrónico</label>
-
             <input
               id="email"
               v-model="email"
@@ -233,6 +386,25 @@ const registrarUsuario = async () => {
 
         </form>
 
+        <!-- REGISTRO CON GOOGLE -->
+        <div class="google-section">
+
+          <div class="divider-text">
+            <span>O regístrate con</span>
+          </div>
+
+          <!-- BOTÓN OFICIAL DE GOOGLE -->
+          <div
+            ref="googleButton"
+            class="google-button-container"
+          ></div>
+
+          <p v-if="cargandoGoogle" class="google-loading">
+            Conectando con Google...
+          </p>
+
+        </div>
+
         <p class="login-text">
           ¿Ya tienes una cuenta?
 
@@ -246,6 +418,7 @@ const registrarUsuario = async () => {
 
   </main>
 </template>
+
 
 <style scoped>
 .register-page {
@@ -441,6 +614,8 @@ input:focus {
   margin-bottom: 18px;
 }
 
+/* BOTÓN CREAR CUENTA */
+
 .register-button {
   width: 100%;
   padding: 18px;
@@ -461,6 +636,47 @@ input:focus {
   background: #93c5fd;
   cursor: not-allowed;
 }
+
+/* REGISTRO CON GOOGLE */
+
+.google-section {
+  margin-top: 24px;
+}
+
+.divider-text {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 22px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.divider-text::before,
+.divider-text::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #cbd5e1;
+}
+
+.google-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.google-loading {
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* ENLACE INICIAR SESIÓN */
 
 .login-text {
   text-align: center;
