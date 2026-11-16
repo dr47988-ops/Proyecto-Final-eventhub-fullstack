@@ -65,11 +65,20 @@ const {
   createEmailVerificationToken
 } = require("../src/services/emailVerificationService");
 
+
 const {
   sendVerificationEmail
 } = require("../src/services/emailService");
 
+// ======================================
+// SIMULAR SCALAR DURANTE LAS PRUEBAS
+// ======================================
+jest.mock("@scalar/express-api-reference", () => ({
+  apiReference: () => (req, res, next) => next()
+}));
+
 const app = require("../src/app");
+
 
 // ======================================
 // PRUEBAS DE AUTENTICACIÓN
